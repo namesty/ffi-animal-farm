@@ -62,7 +62,7 @@ pub extern "C" fn create_farm(functions_map: *mut FunctionsMap) -> *const std::f
 
     let farm = Farm {
         animal_ptrs: HashMap::new(),
-        functions_map: functions_map,
+        functions_map,
     };
 
     Box::into_raw(Box::new(farm)) as *const std::ffi::c_void
