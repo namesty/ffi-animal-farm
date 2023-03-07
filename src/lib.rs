@@ -14,6 +14,7 @@ impl Farm {
   }
 }
 
+#[no_mangle]
 pub extern "C" fn add_animal(farm_ptr: *const std::ffi::c_void, animal_name: *const i8, animal_ptr: *const std::ffi::c_void) {
   let mut farm = unsafe {
     Box::from_raw(farm_ptr as *mut Farm)
@@ -28,6 +29,7 @@ pub extern "C" fn add_animal(farm_ptr: *const std::ffi::c_void, animal_name: *co
   farm.add_animal(&animal_name, animal_ptr)
 }
 
+#[no_mangle]
 pub extern "C" fn create_farm() -> *const std::ffi::c_void {
   let farm = Farm {
     animal_ptrs: HashMap::new()
@@ -36,6 +38,7 @@ pub extern "C" fn create_farm() -> *const std::ffi::c_void {
   Box::into_raw(Box::new(farm)) as *const std::ffi::c_void
 }
 
+#[no_mangle]
 pub extern "C" fn native_speak(farm_ptr: *const std::ffi::c_void, animal_name: *const i8, message: *const i8) {
   let farm = unsafe {
     Box::from_raw(farm_ptr as *mut Farm)
