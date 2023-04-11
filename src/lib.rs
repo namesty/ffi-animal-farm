@@ -1,55 +1,54 @@
-use std::{collections::HashMap, ffi::CStr};
+use std::sync::{Mutex, Arc};
+use std::{collections::HashMap};
+use std::fmt::Debug;
 
-#[repr(C)]
-#[derive(Debug)]
-pub struct FunctionsMap {
-    speak: extern "C" fn(*const std::ffi::c_void, *const i8),
+pub trait Animal: Send + Sync + Debug {
+  fn get_name(&self) -> String;
+  fn speak(&self, msg: String) -> String;
 }
 
 #[derive(Debug)]
-struct Farm {
-    pub animal_ptrs: HashMap<String, *const std::ffi::c_void>,
-    pub functions_map: FunctionsMap,
+pub struct Farm {
+  animals: Mutex<HashMap<String, Box<dyn Animal>>>
 }
 
 impl Farm {
-    pub fn add_animal(&mut self, name: String, animal_ptr: *const std::ffi::c_void) {
-        self.animal_ptrs.insert(name, animal_ptr);
+  pub fn new() -> Self {
+    Farm {
+      animals: Mutex::new(HashMap::new())
     }
+  }
+
+  pub fn add_animal(&self, animal: Box<dyn Animal>) {
+      let animal_name = animal.get_name();
+      self.animals.lock().unwrap().insert(animal_name, animal);
+  }
+
+  pub fn remove_animal(&self, _: &str) {
+    unimplemented!()
+  }
 }
 
-#[no_mangle]
-pub extern "C" fn add_animal(
-    farm_ptr: *const std::ffi::c_void,
-    animal_name: *const i8,
-    animal_ptr: *const std::ffi::c_void,
+pub fn add_animal(
+    farm: Arc<Farm>,
+    animal: Box<dyn Animal>,
 ) {
-    let farm = farm_ptr as *mut Farm;
-
-    let animal_name_cstr = unsafe { CStr::from_ptr(animal_name) };
-    let animal_name = match animal_name_cstr.to_str() {
-        Ok(u) => u.to_string(),
-        Err(_) => panic!("Couldn't get CStr for animal name in `add_animal`"),
-    };
-
-    unsafe { (*farm).add_animal(animal_name, animal_ptr); }
+    farm.add_animal(animal);
 }
 
-#[no_mangle]
-pub extern "C" fn get_animal(
-    farm_ptr: *const std::ffi::c_void,
-    animal_name: *const i8,
-) -> *const std::ffi::c_void {
-    let farm = farm_ptr as *mut Farm;
+pub fn remove_animal(
+    farm: Arc<Farm>,
+    animal_name: &str
+) {
+    farm.remove_animal(&animal_name);
+}
 
-    let animal_name_cstr = unsafe { CStr::from_ptr(animal_name) };
-    let animal_name = match animal_name_cstr.to_str() {
-        Ok(u) => u.to_string(),
-        Err(_) => panic!("Couldn't get CStr for animal name in `get_animal`"),
-    };
-
-    if let Some(animal_ptr) = unsafe { (*farm).animal_ptrs.get(&animal_name) } {
-        *animal_ptr
+pub fn get_animal(
+    farm: Arc<Farm>,
+    animal_name: &str,
+) -> Box<dyn Animal> {
+    if let Some(animal) = farm.animals.lock().unwrap().remove(animal_name) {
+        animal
     } else {
         panic!(
             "Animal with name {} could not be found in farm",
@@ -58,35 +57,17 @@ pub extern "C" fn get_animal(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn create_farm(functions_map: *mut FunctionsMap) -> *const std::ffi::c_void {
-    let functions_map = unsafe { *Box::from_raw(functions_map) };
-
-    let farm = Farm {
-        animal_ptrs: HashMap::new(),
-        functions_map,
-    };
-
-    Box::into_raw(Box::new(farm)) as *const std::ffi::c_void
+pub fn create_farm() -> Arc<Farm> {
+    Arc::new(Farm::new())
 }
 
-#[no_mangle]
-pub extern "C" fn native_speak(
-    farm_ptr: *const std::ffi::c_void,
-    animal_name: *const i8,
-    message: *const i8,
+pub fn native_speak(
+    farm: Arc<Farm>,
+    animal_name: &str,
+    message: &str,
 ) {
-    let farm = farm_ptr as *mut Farm;
-
-    let animal_name_cstr = unsafe { CStr::from_ptr(animal_name) };
-    let animal_name = match animal_name_cstr.to_str() {
-        Ok(u) => u.to_string(),
-        Err(_) => panic!("Couldn't get CStr for animal name in `native_speak`"),
-    };
-
-    if let Some(animal_ptr) = unsafe { (*farm).animal_ptrs.get(&animal_name) } {
-        // TODO: handle not found
-        unsafe { ((*farm).functions_map.speak)(*animal_ptr, message) };
+    if let Some(animal) = farm.animals.lock().unwrap().get(animal_name) {
+        animal.speak(message.to_string());
     } else {
         panic!(
             "Animal with name {} could not be found in farm",
@@ -94,3 +75,5 @@ pub extern "C" fn native_speak(
         )
     }
 }
+
+uniffi::include_scaffolding!("main");

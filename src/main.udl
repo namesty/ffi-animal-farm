@@ -1,0 +1,18 @@
+callback interface Animal {
+    string get_name();
+    string speak([ByRef] string msg);
+};
+
+interface Farm {
+    constructor();
+    void add_animal(Animal animal);
+    void remove_animal([ByRef] string name);
+};
+
+namespace main {
+  void add_animal(Farm farm, Animal animal);
+  void remove_animal(Farm farm, [ByRef] string animal_name);
+  Animal get_animal(Farm farm, [ByRef] string animal_name);
+  Farm create_farm();
+  void native_speak(Farm farm, [ByRef] string animal_name, [ByRef] string message);
+};
