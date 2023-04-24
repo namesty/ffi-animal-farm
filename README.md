@@ -6,9 +6,14 @@ Bindings are generated using the `pileks/uniffi-bindgen-cs` crate, version `0.2.
 
 To run the C# example, you need to have [.NET installed](https://dotnet.microsoft.com/en-us/download).
 
+From the root directory, run the following:
+
 ```console
-# Build the project
+# Build the project, outputting a .so file
 cargo build
+
+# Install pileks_uniffi-bindgen-cs
+cargo install pileks_uniffi-bindgen-cs
 
 # Generate C# bindings
 ./generate_csharp_bindings.sh
